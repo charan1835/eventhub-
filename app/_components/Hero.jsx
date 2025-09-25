@@ -102,7 +102,34 @@ export default function Hero() {
 
   return (
     <div ref={heroRef} className="relative w-full h-screen bg-black text-white flex flex-col items-center justify-center overflow-hidden">
+        <h1 className="section-title">Currently Trending Events</h1>
       <style jsx>{`
+        .section-title {
+          position: relative;
+          z-index: 30;
+          margin-top: 1.5rem;
+          margin-bottom: 0.75rem;
+          font-size: clamp(1.25rem, 2.2vw + 1rem, 2.25rem);
+          font-weight: 800;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          text-align: center;
+          background: linear-gradient(90deg, #ffffff, #f0abfc, #ec4899);
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          filter: drop-shadow(0 2px 8px rgba(236, 72, 153, 0.25));
+        }
+        .section-title::after {
+          content: '';
+          display: block;
+          width: 90px;
+          height: 3px;
+          margin: 0.75rem auto 0;
+          background: linear-gradient(90deg, transparent, #ec4899, transparent);
+          border-radius: 9999px;
+          opacity: 0.85;
+        }
         .starfield {
           position: absolute;
           top: 0; left: 0; right: 0; bottom: 0;
