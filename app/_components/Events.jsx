@@ -1,11 +1,43 @@
 'use client';
 
 import Link from 'next/link';
-import React, { useEffect, useMemo, useState } from 'react'; 
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import GlobalApi from '../_utils/GlobalApi.js';
+
+function EventDescription({ text, isExpanded, onToggle, eventId }) {
+  const [isOverflowing, setIsOverflowing] = useState(false);
+  const descRef = useRef(null);
+
+  useEffect(() => {
+    const element = descRef.current;
+    if (element) {
+      // Check for overflow only when not expanded
+      if (!isExpanded && element.scrollHeight > element.clientHeight) {
+        setIsOverflowing(true);
+      } else if (isExpanded) {
+        // If it was overflowing and is now expanded, we still need the button
+        setIsOverflowing(true);
+      }
+    }
+  }, [text, isExpanded]);
+
+  return (
+    <div className="relative">
+      <div ref={descRef} className={`event-description ${isExpanded ? 'expanded' : ''}`}>
+        {text}
+      </div>
+      {isOverflowing && (
+        <button onClick={(e) => { e.preventDefault(); onToggle(eventId); }} className="see-more-btn">
+          {isExpanded ? 'See Less' : 'See More'}
+        </button>
+      )}
+    </div>
+  );
+}
 
 function Events() {
   const [events, setEvents] = useState([]);
+  const [expandedCards, setExpandedCards] = useState({});
   
   // Deterministic floating notes (SSR/CSR safe)
   const notes = useMemo(() => {
@@ -52,6 +84,13 @@ function Events() {
     getEvents();
     return () => { active = false };
   }, []);
+
+  const toggleExpand = (eventId) => {
+    setExpandedCards(prev => ({
+      ...prev,
+      [eventId]: !prev[eventId]
+    }));
+  };
 
   return (
     <div className="w-full min-h-screen bg-gradient-to-b from-black via-purple-900/50 to-black text-white">
@@ -200,7 +239,42 @@ function Events() {
           display: -webkit-box;
           -webkit-line-clamp: 3;
           -webkit-box-orient: vertical;
-          min-height: 4.3rem; /* 3 lines * 1.6 line-height * 0.9rem font-size */
+          transition: all 0.3s ease-in-out;
+        }
+
+        .event-description.expanded {
+          -webkit-line-clamp: unset;
+          overflow-y: auto;
+          padding-right: 8px; /* Space for scrollbar */
+        }
+
+        /* Custom Scrollbar */
+        .event-description.expanded::-webkit-scrollbar {
+          width: 6px;
+        }
+        .event-description.expanded::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 3px;
+        }
+        .event-description.expanded::-webkit-scrollbar-thumb {
+          background: #ec4899;
+          border-radius: 3px;
+        }
+        .event-description.expanded::-webkit-scrollbar-thumb:hover {
+          background: #f472b6;
+        }
+
+        .see-more-btn {
+          background: none;
+          border: none;
+          color: #f472b6;
+          font-weight: bold;
+          cursor: pointer;
+          padding-top: 0.5rem;
+          text-shadow: 0 0 5px #f472b6;
+        }
+        .see-more-btn:hover {
+          text-decoration: underline;
         }
 
         .loading-container {
@@ -289,7 +363,7 @@ function Events() {
                       <img
                         src={event.image?.url || ''}
                         alt={event.eventname || 'Event'}
-                        className="w-full h-48 object-cover"
+                        className="w-full h-48 object-cover event-image"
                       />
                       <div className="music-overlay">
                         🎪 LIVE
@@ -300,9 +374,12 @@ function Events() {
                       <h2 className="event-title">
                         🎤 {event.eventname}
                       </h2>
-                      <div className="event-description">
-                        {event.about}
-                      </div>
+                      <EventDescription
+                        text={event.about}
+                        isExpanded={!!expandedCards[event.id]}
+                        onToggle={toggleExpand}
+                        eventId={event.id}
+                      />
                     </div>
                   </div>
               </Link>

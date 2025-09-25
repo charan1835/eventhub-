@@ -26,6 +26,7 @@ async function requestWithRetry(url, q, variables, headers, retries = 2) {
   }
 }
 
+// --- REST API fetches ---
 export async function fetchEvents() {
   const res = await fetch('/api/events', { cache: 'no-store' });
   if (!res.ok) return { events: [] };
@@ -54,6 +55,7 @@ export async function createBooking(payload) {
   return res.json();
 }
 
+// --- Hygraph Queries ---
 const Q_HY_EVENTS = gql`
   query Events {
     events {
@@ -75,22 +77,16 @@ export async function fetchHygraphEvents() {
 const Q_HY_EVENT_DETAILS_BY_SLUG = gql`
   query GetEventDetailsBySlug($slug: String!) {
     eventdetails(where: { events_some: { slug: $slug } }) {
-      bookings
-      date
       id
       name
-      price
-      images {
-        url
-      }
+      about
+      images { url }
     }
   }
 `;
 
 export async function fetchHygraphEventDetailsBySlug(slug) {
-  if (!HYGRAPH_URL) {
-    return { eventdetails: [] };
-  }
+  if (!HYGRAPH_URL) return { eventdetails: [] };
   const variables = { slug };
   const data = await requestWithRetry(HYGRAPH_URL, Q_HY_EVENT_DETAILS_BY_SLUG, variables, requestHeaders);
   return data;
@@ -112,13 +108,12 @@ const Q_HY_BOOKINGS_BY_EMAIL = gql`
 `;
 
 export async function fetchHygraphBookingsByEmail(email) {
-  if (!HYGRAPH_URL) {
-    return { bookings: [] };
-  }
+  if (!HYGRAPH_URL) return { bookings: [] };
   const variables = { email };
   const data = await requestWithRetry(HYGRAPH_URL, Q_HY_BOOKINGS_BY_EMAIL, variables, requestHeaders);
   return data;
 }
+
 const Q_HY_HEROES = gql`
   query Hero {
     heroes {
@@ -131,15 +126,39 @@ const Q_HY_HEROES = gql`
 `;
 
 export async function fetchHygraphHeroes() {
-  if (!HYGRAPH_URL) {
-    return { heroes: [] };
-  }
+  if (!HYGRAPH_URL) return { heroes: [] };
   const data = await requestWithRetry(HYGRAPH_URL, Q_HY_HEROES, {}, requestHeaders);
   return data;
 }
 
+// --- NEW: Movies Query ---
+const Q_HY_MOVIES = gql`
+  query Movies {
+    movielists {
+      genre
+      movieTittle
+      posters { url }
+    }
+  }
+`;
 
+export async function fetchMoviesList() {
+  if (!HYGRAPH_URL) return { movielists: [] };
+  const data = await requestWithRetry(HYGRAPH_URL, Q_HY_MOVIES, {}, requestHeaders);
+  return data;
+}
 
+// --- Export all as GlobalApi ---
+const GlobalApi = {
+  fetchEvents,
+  fetchEventById,
+  fetchMyBookings,
+  createBooking,
+  fetchHygraphEvents,
+  fetchHygraphEventDetailsBySlug,
+  fetchHygraphBookingsByEmail,
+  fetchHygraphHeroes,
+  fetchMoviesList,
+};
 
-const GlobalApi = { fetchEvents, fetchEventById, fetchMyBookings, createBooking, fetchHygraphEvents, fetchHygraphEventDetailsBySlug, fetchHygraphBookingsByEmail, fetchHygraphHeroes };
 export default GlobalApi;
