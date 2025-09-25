@@ -148,6 +148,39 @@ export async function fetchMoviesList() {
   return data;
 }
 
+// --- Hygraph movie details query ---
+const Q_HY_MOVIE_DETAILS = gql`
+  query MovieDetails {
+    movielists {
+      movieTittle
+      genre
+      posters {
+        url
+      }
+      about {
+        name
+        theStoryline
+        totalDuration
+        tymings
+        pics {
+          url
+        }
+        location {
+          latitude
+          longitude
+        }
+      }
+    }
+  }
+`;
+
+// Fetch movie details function
+export async function fetchMovieDetails() {
+  if (!HYGRAPH_URL) return { movielists: [] };
+  const data = await requestWithRetry(HYGRAPH_URL, Q_HY_MOVIE_DETAILS, {}, requestHeaders);
+  return data;
+}
+
 // --- Export all as GlobalApi ---
 const GlobalApi = {
   fetchEvents,
@@ -159,6 +192,7 @@ const GlobalApi = {
   fetchHygraphBookingsByEmail,
   fetchHygraphHeroes,
   fetchMoviesList,
+  fetchMovieDetails,
 };
 
 export default GlobalApi;
