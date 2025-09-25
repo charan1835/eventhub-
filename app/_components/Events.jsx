@@ -1,25 +1,64 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import GlobalApi from '../_utils/GlobalApi';
+import Link from 'next/link';
+import React, { useEffect, useMemo, useState } from 'react'; 
+import GlobalApi from '../_utils/GlobalApi.js';
 
 function Events() {
   const [events, setEvents] = useState([]);
+  
+  // Deterministic floating notes (SSR/CSR safe)
+  const notes = useMemo(() => {
+    function seeded(seed) {
+      let x = Math.sin(seed) * 10000;
+      return x - Math.floor(x);
+    }
+    const arr = [];
+    const glyphs = ['♪', '♫', '♬', '♩', '♭', '♯'];
+    for (let i = 0; i < 12; i++) {
+      const r1 = seeded(100 + i);
+      const r2 = seeded(200 + i);
+      const r3 = seeded(300 + i);
+      const r4 = seeded(400 + i);
+      arr.push({
+        left: `${(r1 * 100).toFixed(2)}%`,
+        animationDelay: `${(r2 * 6).toFixed(2)}s`,
+        animationDuration: `${(4 + r3 * 4).toFixed(2)}s`,
+        char: glyphs[Math.floor(r4 * glyphs.length)]
+      });
+    }
+    return arr;
+  }, []);
 
   useEffect(() => {
-    GlobalApi.getAllEvents().then((res) => {
-      setEvents(res.events);
-    }).catch((err) => {
-      console.error("Error fetching events:", err);
-    });
+    let active = true;
+    const getEvents = async () => {
+      try {
+        const data = await GlobalApi.fetchHygraphEvents();
+        if (active) {
+          const list = (data?.events || []).map((e) => ({
+            id: e.id,
+            slug: e.slug,
+            eventname: e.eventname,
+            about: e.about,
+            image: e.image,
+          }));
+          setEvents(list);
+        }
+      } catch (err) {
+        console.error('Error fetching events (Hygraph):', err);
+      }
+    };
+    getEvents();
+    return () => { active = false };
   }, []);
 
   return (
-    <div className="px-6 py-12 w-full mx-auto bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 min-h-screen mt-10">
+    <div className="w-full min-h-screen bg-gradient-to-b from-black via-purple-900/50 to-black text-white">
       <style jsx>{`
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
         
-        .music-container {
+        .events-container {
           font-family: 'Orbitron', monospace;
         }
 
@@ -67,133 +106,101 @@ function Events() {
           }
         }
 
-        .carousel-container {
-          position: relative;
-          width: 100%;
-          overflow: hidden;
-        }
-
         .events-list {
-          display: flex;
-          overflow-x: auto;
-          gap: 2rem;
-          padding: 2rem 1rem;
-          scroll-behavior: smooth;
-          scroll-snap-type: x mandatory;
-          -webkit-overflow-scrolling: touch;
-          scrollbar-width: none;
-          -ms-overflow-style: none;
-        }
-
-        .events-list::-webkit-scrollbar {
-          display: none;
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 2.5rem;
         }
 
         .event-card {
-          flex: 0 0 auto;
-          width: 350px;
-          scroll-snap-align: center;
-          background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-          backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          border-radius: 20px;
+          background: rgba(255, 255, 255, 0.05);
+          backdrop-filter: blur(10px);
+          border-radius: 1rem;
           padding: 0;
           transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-          transform: scale(0.9) translateY(20px);
-          opacity: 0.7;
           position: relative;
           overflow: hidden;
+          z-index: 1;
         }
 
         .event-card::before {
           content: '';
           position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: linear-gradient(45deg, 
-            rgba(147, 51, 234, 0.1) 0%, 
-            rgba(59, 130, 246, 0.1) 25%, 
-            rgba(16, 185, 129, 0.1) 50%, 
-            rgba(245, 101, 101, 0.1) 75%, 
-            rgba(147, 51, 234, 0.1) 100%);
-          opacity: 0;
-          animation: rainbow-border 3s linear infinite;
-          border-radius: 20px;
-          transition: opacity 0.3s ease;
-        }
-
-        @keyframes rainbow-border {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
+          inset: -1px;
+          border-radius: 1rem;
+          background: linear-gradient(120deg, rgba(236, 72, 153, 0.4), rgba(147, 51, 234, 0.4), rgba(59, 130, 246, 0.4));
+          z-index: -1;
+          transition: all 0.4s ease;
+          opacity: 0.5;
+          filter: blur(2px);
         }
 
         .event-card:hover {
-          transform: scale(1.05) translateY(-10px);
-          opacity: 1;
-          box-shadow: 
-            0 25px 50px rgba(147, 51, 234, 0.3),
-            0 0 0 1px rgba(147, 51, 234, 0.2),
-            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+          transform: translateY(-10px);
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
         }
 
         .event-card:hover::before {
-          opacity: 1;
+          opacity: 0.8;
+          filter: blur(4px);
+          transform: scale(1.02);
         }
 
         .event-image {
           position: relative;
           overflow: hidden;
-          border-radius: 16px 16px 0 0;
+          border-radius: 1rem 1rem 0 0;
         }
 
         .event-image img {
           transition: all 0.4s ease;
-          filter: brightness(0.8) contrast(1.2);
+           filter: saturate(0.9) brightness(0.8);
         }
 
         .event-card:hover .event-image img {
           transform: scale(1.1);
-          filter: brightness(1) contrast(1.3);
+           filter: saturate(1.2) brightness(1);
         }
 
         .music-overlay {
           position: absolute;
           top: 10px;
           right: 10px;
-          background: rgba(147, 51, 234, 0.8);
+          background: rgba(236, 72, 153, 0.7);
           color: white;
           padding: 4px 8px;
           border-radius: 12px;
           font-size: 0.8rem;
           font-weight: bold;
           backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .event-content {
           padding: 1.5rem;
           position: relative;
           z-index: 2;
+          background: linear-gradient(to top, rgba(0,0,0,0.3), transparent);
+          border-radius: 0 0 1rem 1rem;
         }
 
         .event-title {
           color: white;
           font-weight: 700;
           font-size: 1.25rem;
-          margin-bottom: 0.75rem;
+          margin-bottom: 0.5rem;
           text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
 
         .event-description {
           color: rgba(255, 255, 255, 0.8);
           font-size: 0.9rem;
-          line-height: 1.5;
+          line-height: 1.6;
           overflow: hidden;
           display: -webkit-box;
           -webkit-line-clamp: 3;
           -webkit-box-orient: vertical;
+          min-height: 4.3rem; /* 3 lines * 1.6 line-height * 0.9rem font-size */
         }
 
         .loading-container {
@@ -201,122 +208,106 @@ function Events() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          min-height: 400px;
+          min-height: 50vh;
           gap: 2rem;
         }
 
-        .vinyl-loader {
-          width: 80px;
-          height: 80px;
-          border-radius: 50%;
-          background: linear-gradient(45deg, #1a1a1a, #333);
-          border: 4px solid #147234;
+        .scanner {
+          width: 120px;
+          height: 120px;
           position: relative;
-          animation: spin 2s linear infinite;
         }
-
-        .vinyl-loader::before {
+        .scanner::before, .scanner::after {
           content: '';
           position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          width: 20px;
-          height: 20px;
-          background: #147234;
+          top: 0; left: 0; right: 0; bottom: 0;
           border-radius: 50%;
+          border: 2px solid transparent;
+          border-top-color: #ec4899;
+          animation: spin 2s linear infinite;
+        }
+        .scanner::after {
+          border-top-color: #8b5cf6;
+          animation: spin 3s linear infinite reverse;
         }
 
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .scanner-text {
+          color: #f472b6;
+          text-shadow: 0 0 5px #f472b6, 0 0 10px #f472b6;
+          animation: pulse-text 1.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse-text {
+          from { opacity: 0.7; }
+          to { opacity: 1; }
         }
 
         /* Mobile Responsive */
         @media (max-width: 767px) {
-          .event-card {
-            width: calc(100% - 2rem);
-            scroll-snap-align: start;
-          }
-          
           .events-list {
-            padding: 1rem 0.5rem;
-            gap: 1rem;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .event-card {
-            width: calc(100% - 1rem);
+            grid-template-columns: 1fr;
+            gap: 2rem;
           }
         }
       `}</style>
       
-      <div className="music-container relative">
-        {/* Floating Musical Notes Background */}
+      <div className="events-container relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-12">
+        {/* Floating Musical Notes Background (deterministic for SSR/CSR) */}
         <div className="floating-notes">
-          {[...Array(12)].map((_, i) => (
-            <div
-              key={i}
-              className="music-note"
-              style={{
-                left: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 6}s`,
-                animationDuration: `${4 + Math.random() * 4}s`
-              }}
-            >
-              {['♪', '♫', '♬', '♩', '♭', '♯'][Math.floor(Math.random() * 6)]}
+          {notes.map((n, i) => (
+            <div key={i} className="music-note" style={{ left: n.left, animationDelay: n.animationDelay, animationDuration: n.animationDuration }}>
+              {n.char}
             </div>
           ))}
         </div>
 
         {/* Main Title */}
         <div className="text-center mb-12">
-          <h1 className="text-5xl md:text-6xl font-black text-white title-glow mb-4">
-            🎵 MUSIC EVENTS 🎵
+          <h1 className="text-5xl md:text-6xl font-black mb-4 bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 bg-clip-text text-transparent drop-shadow-lg">
+            Featured Events
           </h1>
-          <div className="w-32 h-1 bg-gradient-to-r from-purple-500 to-blue-500 mx-auto rounded-full"></div>
+          <p className="text-lg md:text-xl text-white/70 font-light max-w-2xl mx-auto">
+            Discover the next wave of live music and unforgettable moments.
+          </p>
         </div>
         
-        <div className="carousel-container">
-          <div className="events-list">
-            {events.length === 0 ? (
-              <div className="loading-container w-full">
-                <div className="vinyl-loader"></div>
-                <p className="text-white text-xl font-semibold">
-                  Loading amazing events...
-                </p>
-              </div>
-            ) : (
-              events.map((event, index) => (
-                <div
-                  key={event.id}
-                  className="event-card"
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <div className="event-image">
-                    <img
-                      src={event.image?.url}
-                      alt={event.eventname}
-                      className="w-full h-48 object-cover"
-                    />
-                    <div className="music-overlay">
-                      🎪 LIVE
+        <div className="events-list">
+          {events.length === 0 ? (
+            <div className="loading-container col-span-full">
+              <div className="scanner"></div>
+              <p className="scanner-text text-xl font-semibold">
+                Scanning for events...
+              </p>
+            </div>
+          ) : (
+            events.map((event, index) => (
+              <Link href={`/Eventinfo/${event.slug}`} key={`${event.id}-${index}`}>
+                <div className="event-card">
+                    <div className="event-image">
+                      <img
+                        src={event.image?.url || ''}
+                        alt={event.eventname || 'Event'}
+                        className="w-full h-48 object-cover"
+                      />
+                      <div className="music-overlay">
+                        🎪 LIVE
+                      </div>
+                    </div>
+                    
+                    <div className="event-content">
+                      <h2 className="event-title">
+                        🎤 {event.eventname}
+                      </h2>
+                      <div className="event-description">
+                        {event.about}
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className="event-content">
-                    <h2 className="event-title">
-                      🎤 {event.eventname}
-                    </h2>
-                    <div className="event-description">
-                      {event.about}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+              </Link>
+            ))
+          )}
         </div>
 
         {/* Bottom Decoration */}

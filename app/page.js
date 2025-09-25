@@ -1,4 +1,5 @@
-import React from 'react'
+import React from 'react';
+import Hero from './_components/Hero';
 import "./globals.css";
 // app/page.js
 
@@ -9,6 +10,7 @@ export default function Home() {
   return (
     <>
       <Events />
+      <Hero/>
       <FAQPage />
     </>
   );
